@@ -44,8 +44,10 @@ func main() {
 	// so it will block the process from exiting
 	switch settings.RunMode {
 	case "core":
+		go Leader("core")
 		psql.Core()
 	case "satellite":
+		go Leader("satellite")
 		psql.Satellite()
 	case "dump":
 		psql.DumpData()
@@ -71,7 +73,7 @@ func setupLogger(settings *config) {
 	}
 
 	opts := &slog.HandlerOptions{
-		AddSource: false,
+		AddSource: true,
 		Level:     level,
 	}
 

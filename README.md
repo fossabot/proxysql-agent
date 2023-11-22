@@ -47,11 +47,14 @@ This is currently in alpha. Do not use it in production yet.
 
 There are some linear tickets, but here's a high level overview of what I have in mind.
 
+- *P3* - Leader election; elect one core pod and have it be responsible for managing cluster state
+  - in progress on branch. Current issues:
+    - on shutdown, pods don't stop for like 30s which probably means they are waiting for the lock to expire or something. doesnt matter who has leader, they all pause for a while.
 - *P1* - Health checks; replace the ruby health probe with this
   - make use of a filesystem check for this; use the agent to drop a file into the proxysql container FS (for either healthy or not, haven't decided yet), and make the proxysql container healthcheck monitor that file
 - *P2* - Replace the pre-stop ruby script with this
   - same deal as the health check, use the shared FS for this
-- *P3* - Leader election; elect one core pod and have it be responsible for managing cluster state
+
 - *P3* - "plugin" support; we don't necessarily need to add all the Persona specific cases to the main agent, as they won't likely apply to most people
   - "chaosmonkey" feature
     - feature branch currently has it as included in the main agent, but I will extract it later
