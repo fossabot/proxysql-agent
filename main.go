@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"plugin"
 	"time"
 )
 
@@ -20,6 +23,8 @@ func main() {
 	}
 
 	setupLogger(settings)
+
+	loadPlugin()
 
 	slog.Info("build info", slog.Any("version", Version), slog.Any("time", BuildTime), slog.Any("build", Build))
 
@@ -83,4 +88,32 @@ func setupLogger(settings *config) {
 	logger := slog.New(handler)
 
 	slog.SetDefault(logger)
+}
+
+func loadPlugin() {
+	plugins, err := filepath.Glob("plugins/*.so")
+	if err != nil {
+		panic(err)
+	}
+
+	// Open - Loads the plugin
+	fmt.Printf("Loading plugin %s", plugins[0])
+	p, err := plugin.Open(plugins[0])
+	if err != nil {
+		panic(err)
+	}
+
+	symbol, err := p.Lookup("Add")
+	if err != nil {
+		panic(err)
+	}
+
+	// symbol - Checks the function signature
+	addFunc, ok := symbol.(func(int, int) int)
+	if !ok {
+		panic("Plugin has no 'Add(int)int' function")
+	}
+
+	addition := addFunc(3, 4)
+	fmt.Printf("Addition is %d\n", addition)
 }

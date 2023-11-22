@@ -13,9 +13,13 @@ BUILD_TIME := `date +%FT%T%z`
 LDFLAGS=-ldflags "-X 'main.Version=$(VERSION)' -X 'main.Build=$(BUILD_SHA)' -X 'main.BuildTime=$(BUILD_TIME)'"
 
 # go source files, ignore vendor directory
-SRC=$(shell find . -type f -name '*.go')
+SRC=$(shell find . -type f -name '*.go' -not -name 'plugin_*')
 
-all: clean build
+all: clean build plugins
+
+plugins: clean
+	@go build -buildmode=plugin -o plugins/persona.so plugins/persona.go
+	@chmod 700 plugins/*.so
 
 $(TARGET): $(SRC)
 	@go build $(LDFLAGS) -o $(TARGET)
@@ -24,7 +28,7 @@ build: clean $(TARGET)
 	@true
 
 clean:
-	@rm -rf $(TARGET) coverage tmp/*
+	@rm -rf $(TARGET) *.so coverage tmp/* plugins/*.so
 
 lint:
 	@gofmt -s -l -w .
@@ -42,7 +46,7 @@ coverage: test
 linux: clean $(TARGET)
 	@GOOS="linux" GOARCH="amd64" go build $(LDFLAGS) -o $(TARGET) .
 
-run: build
+run: build plugins
 	@./$(TARGET)
 
 docker: clean
