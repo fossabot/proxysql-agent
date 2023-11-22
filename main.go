@@ -49,6 +49,8 @@ func main() {
 		psql.Satellite()
 	case "dump":
 		psql.DumpData()
+	case "chaos":
+		psql.ChaosMonkey()
 	default:
 		slog.Info("No run mode specified, exiting")
 	}
@@ -57,7 +59,7 @@ func main() {
 func setupLogger(settings *config) {
 	var level slog.Level
 
-	switch settings.LogLevel {
+	switch settings.Log.Level {
 	case "DEBUG":
 		level = slog.LevelDebug
 	case "INFO":
@@ -71,14 +73,14 @@ func setupLogger(settings *config) {
 	}
 
 	opts := &slog.HandlerOptions{
-		AddSource: false,
+		AddSource: true,
 		Level:     level,
 	}
 
 	var handler slog.Handler = slog.NewTextHandler(os.Stdout, opts)
-	// if appEnv == "production" {
-	//     handler = slog.NewJSONHandler(os.Stdout, opts)
-	// }
+	if settings.Log.Format == "json" {
+		handler = slog.NewJSONHandler(os.Stdout, opts)
+	}
 
 	logger := slog.New(handler)
 

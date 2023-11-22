@@ -12,7 +12,9 @@ import (
 
 var testConfigFile = []byte(`
 start_delay: 30
-log_level: "TRACE"
+log:
+  level: "TRACE"
+  format: "text"
 run_mode: core
 proxysql:
   address: "proxysql.vip:6032"
@@ -117,7 +119,7 @@ func TestConfigFile(t *testing.T) {
 	assert.NoError(t, err, "Configuration should not return an error")
 
 	assert.Equal(t, 30, fileConfig.StartDelay)
-	assert.Equal(t, "TRACE", fileConfig.LogLevel)
+	assert.Equal(t, "TRACE", fileConfig.Log.Level)
 	assert.Equal(t, "core", fileConfig.RunMode)
 
 	assert.Equal(t, "proxysql.vip:6032", fileConfig.ProxySQL.Address)
@@ -133,6 +135,7 @@ func TestConfigFile(t *testing.T) {
 func TestEnvironment(t *testing.T) {
 	t.Setenv("AGENT_START_DELAY", "500")
 	t.Setenv("AGENT_LOG_LEVEL", "WARN")
+	t.Setenv("AGENT_LOG_FORMAT", "json")
 	t.Setenv("AGENT_RUN_MODE", "satellite")
 	t.Setenv("AGENT_PROXYSQL_ADDRESS", "proxysql:6666")
 	t.Setenv("AGENT_PROXYSQL_USERNAME", "proxysql-user")
@@ -149,7 +152,8 @@ func TestEnvironment(t *testing.T) {
 	assert.NoError(t, err, "Configuration should not return an error")
 
 	assert.Equal(t, 500, envConfig.StartDelay)
-	assert.Equal(t, "WARN", envConfig.LogLevel)
+	assert.Equal(t, "WARN", envConfig.Log.Level)
+	assert.Equal(t, "json", envConfig.Log.Format)
 	assert.Equal(t, "satellite", envConfig.RunMode)
 
 	assert.Equal(t, "proxysql:6666", envConfig.ProxySQL.Address)
@@ -166,7 +170,8 @@ func TestFlags(t *testing.T) {
 	os.Args = []string{
 		"cmd",
 		"--start_delay=415",
-		"--log_level=ERROR",
+		"--log.level=ERROR",
+		"--log.format=test",
 		"--run_mode=core",
 		"--proxysql.address=86.75.30.9:9999",
 		"--proxysql.username=nick",
@@ -183,7 +188,8 @@ func TestFlags(t *testing.T) {
 	assert.NoError(t, err, "Configuration should not return an error")
 
 	assert.Equal(t, 415, envConfig.StartDelay)
-	assert.Equal(t, "ERROR", envConfig.LogLevel)
+	assert.Equal(t, "ERROR", envConfig.Log.Level)
+	assert.Equal(t, "test", envConfig.Log.Format)
 	assert.Equal(t, "core", envConfig.RunMode)
 
 	assert.Equal(t, "86.75.30.9:9999", envConfig.ProxySQL.Address)

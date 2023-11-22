@@ -11,7 +11,10 @@ import (
 
 var tmpConfig = &config{
 	StartDelay: 0,
-	LogLevel:   "",
+	Log: struct {
+		Level  string `mapstructure:"level"`
+		Format string `mapstructure:"format"`
+	}{},
 	ProxySQL: struct {
 		Address  string `mapstructure:"address"`
 		Username string `mapstructure:"username"`

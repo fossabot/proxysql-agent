@@ -13,7 +13,10 @@ import (
 type config struct {
 	StartDelay int `mapstructure:"start_delay"`
 
-	LogLevel string `mapstructure:"log_level"`
+	Log struct {
+		Level  string `mapstructure:"level"`
+		Format string `mapstructure:"format"`
+	}
 
 	ProxySQL struct {
 		Address  string `mapstructure:"address"`
@@ -53,7 +56,8 @@ func Configure() (*config, error) {
 
 	// set some defaults
 	viper.GetViper().SetDefault("start_delay", 0)
-	viper.GetViper().SetDefault("log_level", "INFO")
+	viper.GetViper().SetDefault("log.level", "INFO")
+	viper.GetViper().SetDefault("log.format", "text") // text, json
 	viper.GetViper().SetDefault("run_mode", nil)
 
 	// use the dot notation to access nested values
@@ -87,7 +91,8 @@ func Configure() (*config, error) {
 
 	// commandline flags
 	pflag.Int("start_delay", 0, "seconds to pause before starting agent")
-	pflag.String("log_level", "INFO", "the log level for the agent; defaults to INFO")
+	pflag.String("log.level", "INFO", "the log level for the agent")
+	pflag.String("log.format", "text", "the log format for the agent; (text, json)")
 	pflag.String("run_mode", "", "mode to run the agent in; valid values: [core OR satellite]")
 
 	pflag.String("proxysql.address", "127.0.0.1:6032", "proxysql admin interface address")
@@ -124,7 +129,7 @@ func Configure() (*config, error) {
 	// run some validations before proceeding
 	if viper.GetViper().IsSet("run_mode") {
 		runMode := viper.GetViper().GetString("run_mode")
-		if runMode != "core" && runMode != "satellite" && runMode != "dump" {
+		if runMode != "core" && runMode != "satellite" && runMode != "dump" && runMode != "chaos" {
 			return nil, errors.New("run_mode must be either 'core' or 'satellite'")
 		}
 	}

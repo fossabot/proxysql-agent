@@ -610,6 +610,57 @@ func GetCorePods(settings *config) ([]PodInfo, error) {
 	return corePods, err
 }
 
+// Drop all query rules for a duration; this is used to test the primary instance capacity
+// caveats:
+//   - should use leader election so that only one pod runs the function
+//   - should only last for 5 minutes or so; timing tbd
+//   - should run every hour or so, but fuzzed a bit; timing TBD
+//   - should only run during business hours (so like 10am - 6pm PST)
+//   - should eventually be toggleable via a feature flag (or a configmap that is dynamically updated)
+//   - this will make any rules we manually put into place disappear after the run, which seems ideal
+//
+// Sets a global variable 'admin-chaos_monkey_started_at' with current timestamp, but this is ephemeral
+// since the variable will go away if proxysql is reloaded; does not appear to propagate due to a load
+// admin variables call. It'd be nice if we could propagate a value through the cluster, but it seems
+// unlikely; therefore a lease or something might be the best idea.
+func (p *ProxySQL) ChaosMonkey() error {
+	dropCommands := []string{
+		"LOGENTRY ChaosMonkey: Dropping mysql_query_rules for 5 minutes",
+		"DELETE FROM mysql_query_rules",
+		"LOAD MYSQL QUERY RULES TO RUNTIME",
+		"INSERT INTO global_variables (variable_name, variable_value) VALUES ('admin-chaos_monkey_started_at', CURRENT_TIMESTAMP)",
+		"LOAD ADMIN VARIABLES TO RUNTIME",
+	}
+
+	for _, command := range dropCommands {
+		_, err := p.conn.Exec(command)
+		if err != nil {
+			slog.Error("Command failed", slog.String("command", command), slog.Any("error", err))
+		}
+	}
+
+	slog.Info("Dropped rules, sleeping 5 minutes", slog.Any("commands", strings.Join(dropCommands, "; ")))
+
+	time.Sleep(5 * time.Minute)
+
+	loadCommands := []string{
+		"LOAD MYSQL QUERY RULES FROM CONFIG",
+		"LOAD MYSQL QUERY RULES TO RUNTIME",
+		"LOGENTRY ChaosMonkey: Reloaded mysql_query_rules from the config",
+	}
+
+	for _, command := range loadCommands {
+		_, err := p.conn.Exec(command)
+		if err != nil {
+			slog.Error("Command failed", slog.String("command", command), slog.Any("error", err))
+		}
+	}
+
+	slog.Info("Reloaded rules", slog.Any("commands", strings.Join(loadCommands, "; ")))
+
+	return nil
+}
+
 func calculateChecksum(pods []PodInfo) string {
 	data := []string{}
 
@@ -639,6 +690,7 @@ func createCommands(pods []PodInfo) []string {
 		"LOAD MYSQL VARIABLES TO RUNTIME",
 		"LOAD MYSQL SERVERS TO RUNTIME",
 		"LOAD MYSQL USERS TO RUNTIME",
+		// We MIGHT need to remove this when we enable chaos monkey
 		"LOAD MYSQL QUERY RULES TO RUNTIME",
 	)
 
